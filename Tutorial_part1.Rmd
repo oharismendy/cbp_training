@@ -1,0 +1,279 @@
+---
+title: "HemeOnc R Tutorial"
+output: 
+   html_document:
+   html_notebook:
+      toc: true
+      depth: 3
+      theme: united
+      number_sections: true
+---
+
+In this R tutorial part 1, we will get familiar with R, Rstudio and the tydiverse packages.
+
+# The Rstudio enviroment
+
+## General
+
+Make sure you are comfortable with the [Rstudio](https://rstudio.com/wp-content/uploads/2016/01/rstudio-IDE-cheatsheet.pdf) integrated development environment in particular
+differences between file system (bottom right) and R environment ("object/functions" upper left)
+
+* creating a project, exiting a project
+* creating a notebook
+* installing packages
+* inspecting objects - common type of object: vectors, matrices, dataframes
+* data structure: wide vs long formats
+
+## R Notebooks
+
+review some R notebook [documentation](https://bookdown.org/yihui/rmarkdown/notebook.html)
+
+* creating and running code blocks
+* non-code syntax (wiki like)
+* running non-R code
+
+
+## Tydiverse package
+
+
+for this tutorial, we will need to tidyverse package. Note that tidyverse is an aggregation of multiple packages with user/syntax friendly functions to manipulate dataframes. In particular: 
+
+* [dplyr](https://dplyr.tidyverse.org/)
+* [tidyr](https://tidyr.tidyverse.org/)
+* [readr](https://readr.tidyverse.org/)
+* [stringr](https://stringr.tidyverse.org/)
+* [purrr](https://purrr.tidyverse.org/)
+* [tibble](https://tibble.tidyverse.org/)
+* [forcats](https://forcats.tidyverse.org/)
+* [ggplot2](https://ggplot2.tidyverse.org/)
+
+
+
+### Installation
+
+```{r}
+# install.packages("tydiverse")
+# install.packages("survival")
+# install.packages("survminer")
+```
+
+The line above needs to only be run once to download and install the packages. It may need to be re-installed after an R upgrade. Once installed, we can load the package into the environment below. This has to be run at the beginning of every session.
+
+```{r}
+library(tidyverse)
+library(survival)
+library(survminer)
+```
+
+# A primer
+
+## General syntax
+
+The main non-plotting syntax and functions that we will review in this tutorial.
+
+**saving results with "<-"**
+```{r}
+
+# numeric
+res<-1+3 
+
+# dataframes (to be used in tutorial below)
+df<-data.frame(name=c("Alan","Alex","Ashley","Bob","Bill","Charlie"),
+               class=c("A","A","A","B","B","C"),
+               weight=c(65,90,52,75,110,68),
+               height=c(180,167,155,175,195,182))
+
+demog<-data.frame(name=c("Alan","Alex","Ashley","Bob","Bill","Charlie","David","Emily"),
+               sex=c("M","F","F","M","M","M","M","F"),
+               race=c("W","B","W","A","A","W","W","A"),
+               ethnicty=c("H","NH","NH","NH","NH","NH","H","NH"),
+               age=c("45","30","22","51","16","75","67","48"))
+```
+inspect these objects in the Environment frame: size, headers, data types. 
+
+**loading and saving an R object (mock examples)**
+```{r}
+#load("path/to/my/r_data_object.rda")         # load an R object from a .rda file
+#save(df,file="path/to/my/r_data_object.rda") # creates a .rda file corresponding to the R object
+```
+
+**Import and export an R object (mock examples)**
+```{r}
+#data<-read.delim2("path/to/my/table.txt")   # import the table
+#write_tsv(df,"path/to/my/table.txt")        # export the table as tsv file
+```
+Note on import: depending on input file format, you may have to change the separator (sep=","), indicate the absence of header (header=F), or skip a few header rows (skip=4)
+
+Note on export: write_tsv is a pre-set wrapper of the write.table() function. Additional options may exist to change the separator, number of the rows, or insert quotes. write_tsv() is vanilla flavor for export function.  
+
+## Main functions
+
+The main tidyverse functions that will are generally useful
+
+* **select()**: select specific columns
+* **filter()** : filter specific rows
+* **unique()**: remove duplicate entries
+* **rename()**: rename a column
+* **mutate()**: creates a novel column, generally derived from one or previous ones
+* **group_by()**: specify the variable used for aggregation
+* **summarize()**: calculate a summary metric (e.g. "mean") within each group
+* **ntile()**: distribute values into bins of equal size (n=2 high/low, n=100: percentile)
+* **top_n()**: filter the rows corresponding to the top N values of column x
+* **separate()**: split a string into substrings based on a separator. 
+* **spread()**: converting a long format to a wide format
+* **gather()**: converting a wide format to a long format
+* **left_join()**: joining two dataframes sharing common variables
+
+non tidyverse functions: 
+
+* **grepl("expression", string)**: test string matching a specific expression
+* **ifelse(condition, results_true, result_false)**: conditional results    
+* **gsub("old","new",string)** : search and replace strings 
+* **as.numeric**, **as.factor**, **as-character**: change data type
+* **nrow()**, **ncol()**: number of rows and columns
+
+
+math and statistical tests
+
+* (mean,median,min,max,stdev, length)  
+* wilcoxon.test()
+* fisher.test()
+* survival() 
+
+## Piping
+
+functions operating on whole data frames can be piped in sequence, resulting in a more readale code and syntax. Each pipe segment can be entered on a new line following the pipe symbol (%>%)
+
+**select**
+```{r}
+#pipped syntax
+df %>% select(name)
+
+# same as function syntax
+select(df,name)
+
+#same as classic R syntax
+df$name
+```
+
+
+**filter**
+```{r}
+df %>% filter(height<180)
+df %>% filter(grepl("i",name))
+```
+
+**group_by and summarize**
+```{r}
+df %>% group_by(class) %>% summarize(SUM=sum(height),MEAN=mean(height), NUMBER=length(name))
+```
+
+**mutate**
+
+we can use mutate to create a new BMI variable
+```{r}
+df %>% mutate(BMI=weight/(height/100)^2)
+```
+
+**joining**
+
+when two tables with at least one common variable need to be merged. for example, demographics is in a different table
+```{r}
+# keep only rows from df table (left)
+left_join(df,demog)
+
+
+# keep only rows from demog table (left)
+left_join(demog,df)
+
+```
+Note the difference between the two join results. You can also keep only the intersection (inner_join()) or the union (full_join()). Note that joining may create repeated rows when 1) there is more then one common variable and 2) some common variables vary between the two tables. Always know how many rows and columns should be expected from a join and cross check with the result. 
+
+**spread**
+
+use one of the variable as key. Exmples below on 1) generating a mean weight dataframe (meanW) and converting it to long format 
+```{r}
+#add demographic info
+df<-left_join(df,demog) 
+df
+
+# calculate the mean weight in each race
+meanW<-df %>% group_by(class,race) %>% summarize(W=mean(weight))
+meanW
+
+# tranform into a wide format
+meanW %>% spread(key=class,value=W)
+```
+you can achieve the opposite (wide > long) using gather()
+
+
+## Plotting 
+
+ggplot2 is a very modular set of plotting functions. the main ggplot() function allows to declare the dataframe and aesthetic variables. It is combined with a "modifier" function (using "+") to specify the type of plot and some general plotting preferences (colors, themes, labels)
+
+main plots used in this tutorial will be
+
+* **geom_hist()**: for histogram
+* **geom_bar()**: for bar charts
+* **geom_boxplot()**: for box and whisker plots
+* **geom_point()**: scatter plot
+* **ggsurvplot()**: Kaplan Meier survival plot (from survminer package, not from ggplot2)
+
+**example of bar chart**
+```{r fig.height=4, fig.width=4}
+# default order
+ggplot(df,aes(name,height,fill=class))+geom_bar(stat="identity")  #stat="identity" is indicating the y values are taken as is
+
+
+# decreasing order and prettier
+ggplot(df,aes(reorder(name,-height),height,fill=class))+          # reorder the x axis according to the y axis values 
+  geom_bar(stat="identity", width=0.7, col="black", size=1)+    # spacing the bars, adding a 1pt thick line
+  theme_bw()+                                                   # B&W theme
+  scale_fill_manual(values=c("steelblue","tomato","grey"))+     # custom colors
+  xlab("Names")+                                                 # custom x label
+  ylab("Height (cm)")                                         # custom y label
+  
+```
+**example of stacked bar chart**
+```{r fig.height=4, fig.width=4}
+# default 
+ggplot(df,aes(class,weight,fill=name))+geom_bar(stat="identity")
+
+# 100% stacked
+ggplot(df,aes(class,weight,fill=name))+geom_bar(stat="identity", position="fill")+ylab("Fraction of weight")
+```
+
+**example of boxplot**
+```{r fig.height=4, fig.width=4}
+## default
+ggplot(df,aes(class,height))+geom_boxplot()
+
+## adding jitter
+ggplot(df,aes(class,height))+geom_boxplot()+geom_jitter(width=0.1)
+
+
+## adding jitter with sizeW
+ggplot(df,aes(class,height))+geom_boxplot()+geom_jitter(width=0.1,aes(size=weight))
+```
+
+**example of a scatter plot**
+
+```{r fig.height=4, fig.width=5}
+# default
+ggplot(df,aes(height,weight))+geom_point()
+
+# adding name and class info
+ggplot(df,aes(height,weight, shape=class, col=name))+geom_point(size=3)
+```
+
+## Prepare for part II
+
+In preparation for the cbioportal practice (part 2), please download and copy to your working directory the set of tables from the [MSKCC IMPACT study](https://ucsdcloud-my.sharepoint.com/:f:/g/personal/oharismendy_ucsd_edu/EkoYPgBHLwdGpk3xD7ALh70BM2iOoa80Zg9udp4zLUiL7w?e=qdsPE9) (2017 paper). 
+
+The tables include
+
+* IMPACT patient characteristics (clinical and demographic data)
+* mutation status of each patients for ALK, TP53, MYC, PIK3CA, KRAS, BRAF 
+* mutation details in ALK, TP53, MYC, PIK3CA, KRAS, BRAF (one table each)
+
+
